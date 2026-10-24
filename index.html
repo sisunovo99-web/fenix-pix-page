@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Pagamento Pix seguro</title>
+  <style>
+    body{margin:0;min-height:100vh;display:grid;place-items:center;background:#071318;color:#f5fbfb;font-family:system-ui,sans-serif;padding:20px;box-sizing:border-box}
+    .card{width:min(460px,100%);box-sizing:border-box;border:1px solid #31545a;border-radius:26px;padding:24px;background:#132126;text-align:center}
+    .lock{color:#72e6c1;font-size:12px;font-weight:900;letter-spacing:1px}.card h1{font-size:26px;margin:16px 0 8px}.card p{color:#afbec1;line-height:1.5}
+    .qr{width:230px;height:230px;background:#fff;padding:12px;border-radius:16px;margin:16px auto;display:block}.card h2{text-align:left;font-size:15px}
+    textarea{width:100%;min-height:90px;box-sizing:border-box;background:#0a1518;color:#c8d9da;border:1px solid #29484d;border-radius:12px;padding:12px;resize:none}
+    button{width:100%;margin-top:14px;min-height:52px;border:0;border-radius:14px;background:#72e6c1;color:#061217;font-weight:900;font-size:15px}
+    small{display:block;color:#91a7aa;margin-top:14px}.error .icon{margin:auto;border:3px solid #ff9aa2;color:#ff9aa2;border-radius:50%;width:38px;line-height:38px;font-size:24px;font-weight:900}.error h1{color:#ffe3e4}
+  </style>
+</head>
+<body>
+  <main class="card" id="app"><div class="lock">PAGAMENTO PIX SEGURO</div><h1>Carregando Pix…</h1><p>Aguarde um instante.</p></main>
+  <script>
+    const API='https://ekahfxgjxhplyzospuze.supabase.co/functions/v1/api';
+    const escapeHtml=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const app=document.getElementById('app');
+    const code=new URLSearchParams(location.search).get('code')||'';
+    async function load(){
+      if(!/^[a-zA-Z0-9_-]{8,160}$/.test(code)) throw new Error('Link Pix inválido. Solicite um novo link de pagamento.');
+      const response=await fetch(API+'/api/public/pix/'+encodeURIComponent(code),{headers:{Accept:'application/json'}});
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok) throw new Error(data.error||'Pix indisponível. Solicite um novo link de pagamento.');
+      app.innerHTML='<div class="lock">PAGAMENTO PIX SEGURO</div><h1>Escaneie o QR Code</h1><p>Abra o aplicativo do seu banco, escolha Pix e aponte a câmera para pagar.</p><img class="qr" alt="QR Code Pix" src="data:image/png;base64,'+escapeHtml(data.encodedImage||'')+'"><h2>Pix copia e cola</h2><textarea id="pix" readonly>'+escapeHtml(data.payload||'')+'</textarea><button id="copy">Copiar código Pix</button>'+(data.expiresAt?'<small>Disponível até '+escapeHtml(new Date(data.expiresAt).toLocaleString('pt-BR'))+'</small>':'')+'<small>Nenhum dado adicional é solicitado nesta tela.</small>';
+      document.getElementById('copy').onclick=async()=>{await navigator.clipboard.writeText(data.payload||'');document.getElementById('copy').textContent='Código copiado';};
+    }
+    load().catch(error=>{app.className='card error';app.innerHTML='<div class="icon">!</div><h1>Pix indisponível</h1><p>'+escapeHtml(error.message)+'</p>';});
+  </script>
+</body>
+</html>
